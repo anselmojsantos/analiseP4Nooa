@@ -1,0 +1,13 @@
+# Arquivos que NAO vao para o repositorio
+README_projeto.txt
+prototipo-climaSP/
+figuras_noaa/
+cemaden_stations_map.html
+subprefeituras.geojson
+
+# Python
+__pycache__/
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints/

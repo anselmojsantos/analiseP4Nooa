@@ -1,0 +1,214 @@
+=====================================================================
+ANÁLISE DAS INSTALAÇÕES DO CEMADEN EM SÃO PAULO
+Projeto Integrador - 4 | Univesp
+=====================================================================
+
+Esta análise teve como objetivo estudar as instalações do CEMADEN
+(Centro Nacional de Monitoramento e Alertas de Desastres Naturais) e
+as suas localizações nas regiões metropolitanas de São Paulo.
+
+O passo a passo abaixo descreve, na ordem em que foi feito, todo o
+tratamento dos dados: da origem dos dados até a classificação das
+estações por zona da cidade e a exibição das localizações em um mapa.
+
+
+---------------------------------------------------------------------
+1. FONTES
+---------------------------------------------------------------------
+1.1. Banco de dados das estações (CEMADEN)
+  Tabela cemaden_station, hospedada em um PostgreSQL na nuvem
+  (Render), criada para o projeto. A conexão foi feita com a
+  biblioteca SQLAlchemy e a tabela foi carregada para um DataFrame:
+
+      df = pd.read_sql("SELECT * FROM cemaden_station", engine)
+
+  1.2. Zonas da cidade (Dados Abertos - Prefeitura de SP)
+  Polígonos das 32 subprefeituras de São Paulo, baixados do portal
+  Dados Abertos (URBS), dataset "Subprefeituras do Município de São
+  Paulo":
+  - Página do recurso:
+    https://dadosabertos.urbis.prefeitura.sp.gov.br/tl/dataset/subprefeituras/resource/0e38226b-f623-444f-8069-9dd6c8a2a0af
+  - Download direto (subprefeituras.geojson):
+    https://dadosabertos.urbis.prefeitura.sp.gov.br/dataset/7310f0b8-ab0a-4e61-9568-604263457e39/resource/0e38226b-f623-444f-8069-9dd6c8a2a0af/download/subprefeituras.geojson
+
+  Ficha técnica do arquivo baixado:
+    - formato GeoJSON, 32 subprefeituras (campos id, nome, sigla);
+    - projeção EPSG:31983 (metros) - SIRGAS 2000 / UTM zona 23S;
+    - cobertura: Município de São Paulo.
+
+---------------------------------------------------------------------
+2. TIPOS DE ATRIBUTOS (NOMES DAS COLUNAS)
+---------------------------------------------------------------------
+A tabela cemaden_station possui 23 colunas com os dados de cadastro
+das estações. São elas:
+
+  id_estacao                  - identificador interno da estação
+  station_code                - código oficial da estação (CEMADEN)
+  ibge_code                   - código IBGE do município
+  name                        - nome da estação
+  city                        - município onde a estação está
+  state                       - estado (UF)
+  latitude                    - latitude (graus decimais)
+  longitude                   - longitude (graus decimais)
+  altitude                    - altitude (metros)
+  network_id                  - identificador da rede
+  network_acronym             - sigla da rede (ex.: CEMADEN)
+  station_type_id             - identificador do tipo de estação
+  station_type_description    - descrição do tipo (ex.: Pluviométrica)
+  cota_alerta                 - cota de alerta (apenas estações de rio)
+  cota_atencao                - cota de atenção (apenas rios)
+  cota_transbordamento        - cota de transbordamento (apenas rios)
+  installation_date           - data de instalação
+  registration_date           - data de cadastro
+  last_transmission           - data da última transmissão
+  inactive_since              - data de desativação (se houver)
+  raw_payload                 - payload bruto da transmissão (JSON)
+  collected_at                - data/hora da última coleta
+  updated_at                  - data/hora da última atualização
+
+Com as colunas identificadas, o próximo passo foi entender a qualidade
+dos dados (valores vazios) antes de qualquer filtro.
+
+---------------------------------------------------------------------
+3. QUANTIDADES DE NaN
+---------------------------------------------------------------------
+Foi verificada a quantidade de valores vazios (NaN) em todo o
+DataFrame com df.isna().sum():
+
+  - cota_alerta, cota_atencao e cota_transbordamento: 697 valores
+    vazios cada. Essas cotas só fazem sentido para estações instaladas
+    próximas a rios (bacias monitoradas); para a maioria das estações
+    elas nunca foram preenchidas.
+  - demais colunas: 0 valores vazios (todas completas).
+
+Ou seja, do total de 710 estações do Estado de São Paulo presentes na
+tabela, 697 não têm cotas cadastradas.
+
+---------------------------------------------------------------------
+4. FILTRAR SÃO PAULO PELO CÓDIGO IBGE (3550308)
+---------------------------------------------------------------------
+A tabela traz estações de todo o Brasil. Como o estudo é sobre a
+capital paulista, foi aplicado o filtro pelo código IBGE do município
+de São Paulo:
+
+    df_sp = df[df["ibge_code"] == 3550308]
+
+Resultado: 79 estações do CEMADEN dentro de São Paulo capital.
+
+Recalculando os valores vazios no subconjunto (df_sp.isna().sum()):
+
+  - cota_alerta, cota_atencao, cota_transbordamento: 79 valores vazios
+    cada (nenhuma estação da capital tem cotas cadastradas);
+  - demais colunas: 0 valores vazios.
+
+---------------------------------------------------------------------
+5. DROPAR AS COLUNAS QUE NÃO ENTRAM NA ANÁLISE
+---------------------------------------------------------------------
+Como o objetivo desta primeira etapa é apenas a LOCALIZAÇÃO das
+estações, as colunas que não participariam do estudo foram removidas:
+
+  - cota_alerta, cota_atencao, cota_transbordamento: vazias para todas
+    as 79 estações da capital (cotas de rio ainda não cadastradas);
+  - raw_payload: payload bruto de transmissão, dado técnico pesado e
+    sem utilidade para localização.
+
+    new_df = df_sp.drop(columns=["cota_alerta", "cota_atencao",
+                                 "cota_transbordamento", "raw_payload"]
+                               ).reset_index(drop=True)
+
+Com isso o DataFrame ficou enxuto e pronto para o cruzamento espacial.
+
+---------------------------------------------------------------------
+6. GEOPANDAS E O LINK DAS ZONAS
+---------------------------------------------------------------------
+Para saber em qual região da cidade cada estação está, era preciso
+comparar a coordenada (latitude/longitude) de cada estação com o
+polígono de cada zona. Para isso foi usado o geopandas, que trabalha
+com dados espaciais (pontos e polígonos).
+
+  6.1. Polígonos das zonas
+  O arquivo oficial de subprefeituras (link da seção 1.2) possui 32
+  polígonos. Cada subprefeitura foi associada a uma das 5 zonas da
+  cidade e, com o geopandas, os polígonos foram unidos (dissolve) em
+  apenas 5, um por zona:
+
+      Centro, Norte, Sul, Leste, Oeste
+
+  O resultado foi salvo em zonas_sp.geojson, com apenas a coluna
+  "zona" e a geometria.
+
+  6.2. Cruzamento (Point-in-Polygon)
+  Cada estação virou um ponto (gpd.points_from_xy) no sistema de
+  coordenadas EPSG:4326 (WGS84):
+
+    zonas = gpd.read_file(r"C:\TI\Projetos Univesp\Projeto - 4\zonas_sp.geojson")
+    gdf = gpd.GeoDataFrame(
+        new_df,
+        geometry=gpd.points_from_xy(new_df["longitude"], new_df["latitude"]),
+        crs="EPSG:4326",
+    )
+    gdf = gpd.sjoin(gdf, zonas, how="left", predicate="within")
+    gdf["zona"] = gdf["zona"].fillna("Fora de SP")
+    new_df = gdf.drop(columns=["geometry", "index_right"]).copy()
+
+  O sjoin (spatial join) testa se o ponto da estação está DENTRO do
+  polígono de uma zona ("within"). Como nem toda coordenada cai exata-
+  mente dentro de um polígono, o valor vazio recebeu "Fora de SP".
+
+  6.3. Ajuste final (caso Cidade Tiradentes 2)
+  A estação "Cidade Tiradentes 2" ficou como "Fora de SP" mesmo
+  estando na Zona Leste: a coordenada está ~34 m além do limite
+  oficial. Para absorver essa imprecisão, os polígonos ganharam uma
+  tolerância de 100 m (buffer, feito em metros - EPSG:31983) antes do
+  cruzamento:
+
+    zonas["geometry"] = zonas.to_crs("EPSG:31983").geometry.buffer(100).to_crs("EPSG:4326").geometry
+
+  Com isso a estação passou a ser classificada corretamente como Leste.
+
+  Contagem final por zona:
+      Leste     28
+      Sul      27
+      Norte     14
+      Oeste      7
+      Centro     3
+      (sem estações "Fora de SP")
+
+
+---------------------------------------------------------------------
+7. O NOVO DATAFRAME (df_cemaden_station)
+---------------------------------------------------------------------
+Após o cruzamento, foi criado um DataFrame resumido com as colunas que
+serão enviadas a um novo banco de dados:
+
+  id_estacao, station_code, ibge_code, name, city, latitude,
+  longitude, zona, network_id, network_acronym, station_type_id,
+  station_type_description, installation_date, registration_date,
+  inactive_since, collected_at
+
+  df_cemaden_station = new_df[[... colunas acima ...]].copy()
+  print(df_cemaden_station.to_string(index=False))
+
+Resultado: 79 linhas x 16 colunas, cada estação com a sua zona já
+definida. Esse é o dataframe que vai subir para o novo banco.
+
+
+---------------------------------------------------------------------
+8. EXIBIÇÃO DAS LOCALIZAÇÕES POR COR NAS ZONAS
+---------------------------------------------------------------------
+Por fim, as 79 localizações foram exibidas em um mapa interativo
+(folium), com cada zona representada por uma cor:
+
+  - Centro = cinza
+  - Norte  = azul-escuro
+  - Sul    = verde-escuro
+  - Leste  = vermelho
+  - Oeste  = vermelho-escuro
+  - Fora de SP = cinza-claro
+
+Cada marcador mostra o nome da estação e a sua zona (popup), e o mapa
+foi salvo em cemaden_stations_map.html para visualização no navegador.
+
+=====================================================================
+FIM
+=====================================================================
