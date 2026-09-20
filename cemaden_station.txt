@@ -1,147 +1,118 @@
 =====================================================================
-ANÁLISE DAS INSTALAÇÕES DO CEMADEN EM SÃO PAULO
+ANÁLISE cemaden_station
 Projeto Integrador - 4 | Univesp
 =====================================================================
 
-Esta análise teve como objetivo estudar as instalações do CEMADEN
-(Centro Nacional de Monitoramento e Alertas de Desastres Naturais) e
-as suas localizações nas regiões metropolitanas de São Paulo.
-
-O passo a passo abaixo descreve, na ordem em que foi feito, todo o
-tratamento dos dados: da origem dos dados até a classificação das
-estações por zona da cidade e a exibição das localizações em um mapa.
+Este texto descreve, em ordem cronológica, toda a análise exploratória
+feita sobre as estações do CEMADEN em São Paulo: desde a coleta e
+limpeza dos dados, passando pela classificação por zona, até a
+classificação de status (ativa / inativa) e os agrupamentos finais.
 
 
 ---------------------------------------------------------------------
-1. FONTES
+1. A FONTE DOS DADOS
 ---------------------------------------------------------------------
-1.1. Banco de dados das estações (CEMADEN)
-  Tabela cemaden_station, hospedada em um PostgreSQL na nuvem
-  (Render), criada para o projeto. A conexão foi feita com a
-  biblioteca SQLAlchemy e a tabela foi carregada para um DataFrame:
+O dado inicial não vem de arquivos locais, e sim de um banco de dados
+PostgreSQL hospedado na nuvem (Render), criado para o projeto. A
+conexão foi feita com a biblioteca SQLAlchemy e a tabela
+cemaden_station foi carregada inteira para um DataFrame:
 
-      df = pd.read_sql("SELECT * FROM cemaden_station", engine)
+    df = pd.read_sql("SELECT * FROM cemaden_station", engine)
 
-  1.2. Zonas da cidade (Dados Abertos - Prefeitura de SP)
-  Polígonos das 32 subprefeituras de São Paulo, baixados do portal
-  Dados Abertos (URBS), dataset "Subprefeituras do Município de São
-  Paulo":
-  - Página do recurso:
-    https://dadosabertos.urbis.prefeitura.sp.gov.br/tl/dataset/subprefeituras/resource/0e38226b-f623-444f-8069-9dd6c8a2a0af
-  - Download direto (subprefeituras.geojson):
-    https://dadosabertos.urbis.prefeitura.sp.gov.br/dataset/7310f0b8-ab0a-4e61-9568-604263457e39/resource/0e38226b-f623-444f-8069-9dd6c8a2a0af/download/subprefeituras.geojson
+O primeiro passo foi entender o que havia na tabela: 23 colunas com
+dados de cadastro das estações (nome, município, sensores, latitude,
+longitude, cotas, datas de instalação, etc.). No total, 710 estações
+espalhadas por todo o Brasil.
 
-  Ficha técnica do arquivo baixado:
-    - formato GeoJSON, 32 subprefeituras (campos id, nome, sigla);
-    - projeção EPSG:31983 (metros) - SIRGAS 2000 / UTM zona 23S;
-    - cobertura: Município de São Paulo.
 
 ---------------------------------------------------------------------
-2. TIPOS DE ATRIBUTOS (NOMES DAS COLUNAS)
----------------------------------------------------------------------
-A tabela cemaden_station possui 23 colunas com os dados de cadastro
-das estações. São elas:
-
-  id_estacao                  - identificador interno da estação
-  station_code                - código oficial da estação (CEMADEN)
-  ibge_code                   - código IBGE do município
-  name                        - nome da estação
-  city                        - município onde a estação está
-  state                       - estado (UF)
-  latitude                    - latitude (graus decimais)
-  longitude                   - longitude (graus decimais)
-  altitude                    - altitude (metros)
-  network_id                  - identificador da rede
-  network_acronym             - sigla da rede (ex.: CEMADEN)
-  station_type_id             - identificador do tipo de estação
-  station_type_description    - descrição do tipo (ex.: Pluviométrica)
-  cota_alerta                 - cota de alerta (apenas estações de rio)
-  cota_atencao                - cota de atenção (apenas rios)
-  cota_transbordamento        - cota de transbordamento (apenas rios)
-  installation_date           - data de instalação
-  registration_date           - data de cadastro
-  last_transmission           - data da última transmissão
-  inactive_since              - data de desativação (se houver)
-  raw_payload                 - payload bruto da transmissão (JSON)
-  collected_at                - data/hora da última coleta
-  updated_at                  - data/hora da última atualização
-
-Com as colunas identificadas, o próximo passo foi entender a qualidade
-dos dados (valores vazios) antes de qualquer filtro.
-
----------------------------------------------------------------------
-3. QUANTIDADES DE NaN
----------------------------------------------------------------------
-Foi verificada a quantidade de valores vazios (NaN) em todo o
-DataFrame com df.isna().sum():
-
-  - cota_alerta, cota_atencao e cota_transbordamento: 697 valores
-    vazios cada. Essas cotas só fazem sentido para estações instaladas
-    próximas a rios (bacias monitoradas); para a maioria das estações
-    elas nunca foram preenchidas.
-  - demais colunas: 0 valores vazios (todas completas).
-
-Ou seja, do total de 710 estações do Estado de São Paulo presentes na
-tabela, 697 não têm cotas cadastradas.
-
----------------------------------------------------------------------
-4. FILTRAR SÃO PAULO PELO CÓDIGO IBGE (3550308)
+2. FILTRAR SÃO PAULO
 ---------------------------------------------------------------------
 A tabela traz estações de todo o Brasil. Como o estudo é sobre a
-capital paulista, foi aplicado o filtro pelo código IBGE do município
-de São Paulo:
+capital paulista, foi aplicado o filtro pelo código IBGE do
+município de São Paulo (3550308):
 
     df_sp = df[df["ibge_code"] == 3550308]
 
 Resultado: 79 estações do CEMADEN dentro de São Paulo capital.
 
-Recalculando os valores vazios no subconjunto (df_sp.isna().sum()):
-
-  - cota_alerta, cota_atencao, cota_transbordamento: 79 valores vazios
-    cada (nenhuma estação da capital tem cotas cadastradas);
-  - demais colunas: 0 valores vazios.
 
 ---------------------------------------------------------------------
-5. DROPAR AS COLUNAS QUE NÃO ENTRAM NA ANÁLISE
+3. O QUE REMOVER E POR QUÊ (ANÁLISE DOS VALORES VAZIOS)
 ---------------------------------------------------------------------
+Antes de cruzar com as zonas, foi verificada a quantidade de valores
+vazios (NaN) com df_sp.isna().sum(). A análise mostrou:
+
+  - cota_alerta, cota_atencao, cota_transbordamento (cotas de
+    transbordamento): 79 NaN (100%). Essas cotas só existem para
+    estações fluviométricas (que medem nível de rio) e não foram
+    cadastradas. Como as 79 estações de SP são todas pluviométricas
+    (medem chuva), essas colunas ficam vazias.
+  - raw_payload (payload bruto de transmissão): dado técnico pesado
+    e sem utilidade para localização.
+
 Como o objetivo desta primeira etapa é apenas a LOCALIZAÇÃO das
-estações, as colunas que não participariam do estudo foram removidas:
-
-  - cota_alerta, cota_atencao, cota_transbordamento: vazias para todas
-    as 79 estações da capital (cotas de rio ainda não cadastradas);
-  - raw_payload: payload bruto de transmissão, dado técnico pesado e
-    sem utilidade para localização.
+estações, essas colunas foram removidas para deixar o DataFrame
+enxuto:
 
     new_df = df_sp.drop(columns=["cota_alerta", "cota_atencao",
                                  "cota_transbordamento", "raw_payload"]
                                ).reset_index(drop=True)
 
-Com isso o DataFrame ficou enxuto e pronto para o cruzamento espacial.
 
 ---------------------------------------------------------------------
-6. GEOPANDAS E O LINK DAS ZONAS
+4. DE ONDE VIERAM AS ZONAS (O GEOJSON)
 ---------------------------------------------------------------------
-Para saber em qual região da cidade cada estação está, era preciso
-comparar a coordenada (latitude/longitude) de cada estação com o
-polígono de cada zona. Para isso foi usado o geopandas, que trabalha
-com dados espaciais (pontos e polígonos).
+Para saber em qual região cada estação está, era preciso saber o que
+é cada região "no mapa", ou seja, o polígono de cada zona.
 
-  6.1. Polígonos das zonas
-  O arquivo oficial de subprefeituras (link da seção 1.2) possui 32
-  polígonos. Cada subprefeitura foi associada a uma das 5 zonas da
-  cidade e, com o geopandas, os polígonos foram unidos (dissolve) em
-  apenas 5, um por zona:
+A zona foi baixada de uma fonte pública e oficial da Prefeitura de
+São Paulo: o dataset "Subprefeituras" do portal de Dados Abertos
+(URBS), que traz os polígonos das 32 SUBPREFEITURAS do município.
 
-      Centro, Norte, Sul, Leste, Oeste
+  FONTE (download): Prefeitura de SP - Dados Abertos (URBS),
+  dataset "Subprefeituras do Município de São Paulo":
+  - Página do recurso:
+    https://dadosabertos.urbis.prefeitura.sp.gov.br/tl/dataset/subprefeituras/resource/0e38226b-f623-444f-8069-9dd6c8a2a0af
+  - Download direto (arquivo subprefeituras.geojson):
+    https://dadosabertos.urbis.prefeitura.sp.gov.br/dataset/7310f0b8-ab0a-4e61-9568-604263457e39/resource/0e38226b-f623-444f-8069-9dd6c8a2a0af/download/subprefeituras.geojson
 
-  O resultado foi salvo em zonas_sp.geojson, com apenas a coluna
-  "zona" e a geometria.
+Ficha técnica do arquivo baixado (subprefeituras.geojson):
+  - formato GeoJSON, 32 subprefeituras (campos id, nome, sigla);
+  - projeção EPSG:31983 (metros) - SIRGAS 2000 / UTM zona 23S;
+  - cobertura: Município de São Paulo.
 
-  6.2. Cruzamento (Point-in-Polygon)
-  Cada estação virou um ponto (gpd.points_from_xy) no sistema de
-  coordenadas EPSG:4326 (WGS84):
+OBSERVAÇÃO: o GeoSampa (https://geosampa.prefeitura.sp.gov.br/) é o
+portal que publica e mostra essa camada no mapa, mas a página de
+metadados dele não tem botão de download. O download do arquivo foi
+feito pelo portal de Dados Abertos (URBS), no link acima.
+
+Cada subprefeitura foi associada a uma das 5 zonas da cidade e, com o
+geopandas, os polígonos foram unidos (dissolve) em apenas 5, um por
+zona:
+
+    Centro, Norte, Sul, Leste, Oeste
+
+O resultado foi salvo em zonas_sp.geojson.
+
+OBSERVAÇÃO SOBRE O GEOJSON: existe ainda um arquivo alternativo
+(subprefeituras.json, convertido da camada KML do GeoSampa) com
+propriedades complexas (dicionários "{}", sp_codigo, sp_nome,
+sp_areakmt etc.). Para a análise foi usado o arquivo oficial
+subprefeituras.geojson (Dados Abertos URBS), que já vem limpo com os
+campos id, nome e sigla. O arquivo final, zonas_sp.geojson, foi
+simplificado para conter apenas a coluna "zona" e a geometria.
+
+
+---------------------------------------------------------------------
+5. O CRUZAMENTO COM O GEOPANDAS
+---------------------------------------------------------------------
+A ideia central: cada estação tem uma coordenada (lat/lon) e cada
+zona tem um polígono. O geopandas testa, para cada estação, se o
+ponto está DENTRO do polígono de uma zona (teste Point-in-Polygon).
 
     zonas = gpd.read_file(r"C:\TI\Projetos Univesp\Projeto - 4\zonas_sp.geojson")
+
     gdf = gpd.GeoDataFrame(
         new_df,
         geometry=gpd.points_from_xy(new_df["longitude"], new_df["latitude"]),
@@ -151,63 +122,171 @@ com dados espaciais (pontos e polígonos).
     gdf["zona"] = gdf["zona"].fillna("Fora de SP")
     new_df = gdf.drop(columns=["geometry", "index_right"]).copy()
 
-  O sjoin (spatial join) testa se o ponto da estação está DENTRO do
-  polígono de uma zona ("within"). Como nem toda coordenada cai exata-
-  mente dentro de um polígono, o valor vazio recebeu "Fora de SP".
+Como nem toda estação cai dentro de algum polígono (ex.: imprecisão
+de coordenada), o valor vazio foi convertido em "Fora de SP".
 
-  6.3. Ajuste final (caso Cidade Tiradentes 2)
-  A estação "Cidade Tiradentes 2" ficou como "Fora de SP" mesmo
-  estando na Zona Leste: a coordenada está ~34 m além do limite
-  oficial. Para absorver essa imprecisão, os polígonos ganharam uma
-  tolerância de 100 m (buffer, feito em metros - EPSG:31983) antes do
-  cruzamento:
+
+---------------------------------------------------------------------
+6. AJUSTE FINAL (CASO CIDADE TIRADENTES 2)
+---------------------------------------------------------------------
+A estação "Cidade Tiradentes 2" foi marcada como "Fora de SP" mesmo
+estando na Zona Leste: suas coordenadas estavam ~37 m além do limite
+oficial. Para absorver essa imprecisão, os polígonos ganharam uma
+tolerância (buffer de 100 m) antes do cruzamento:
 
     zonas["geometry"] = zonas.to_crs("EPSG:31983").geometry.buffer(100).to_crs("EPSG:4326").geometry
 
-  Com isso a estação passou a ser classificada corretamente como Leste.
-
-  Contagem final por zona:
-      Leste     28
-      Sul      27
-      Norte     14
-      Oeste      7
-      Centro     3
-      (sem estações "Fora de SP")
+Com isso a estação passou a ser classificada corretamente como Leste.
 
 
 ---------------------------------------------------------------------
-7. O NOVO DATAFRAME (df_cemaden_station)
+7. DATAFRAME FINAL DAS ESTAÇÕES
 ---------------------------------------------------------------------
-Após o cruzamento, foi criado um DataFrame resumido com as colunas que
-serão enviadas a um novo banco de dados:
+Após o cruzamento com as zonas, foi criado o DataFrame
+df_cemaden_station com as colunas essenciais:
 
-  id_estacao, station_code, ibge_code, name, city, latitude,
-  longitude, zona, network_id, network_acronym, station_type_id,
-  station_type_description, installation_date, registration_date,
-  inactive_since, collected_at
+    df_cemaden_station = new_df[[
+        "id_estacao", "station_code", "ibge_code",
+        "name", "city", "latitude", "longitude", "zona",
+        "network_id", "network_acronym",
+        "station_type_id", "station_type_description",
+        "installation_date", "registration_date",
+        "last_transmission", "inactive_since", "collected_at",
+    ]].copy()
 
-  df_cemaden_station = new_df[[... colunas acima ...]].copy()
-  print(df_cemaden_station.to_string(index=False))
+Esse DataFrame é a base para as etapas seguintes.
 
-Resultado: 79 linhas x 16 colunas, cada estação com a sua zona já
-definida. Esse é o dataframe que vai subir para o novo banco.
+Distribuição das 79 estações por zona:
+  - Leste: 28
+  - Sul: 27
+  - Norte: 14
+  - Oeste: 7
+  - Centro: 3
 
 
 ---------------------------------------------------------------------
-8. EXIBIÇÃO DAS LOCALIZAÇÕES POR COR NAS ZONAS
+8. ENTENDIMENTO DAS COLUNAS DE DATA
 ---------------------------------------------------------------------
-Por fim, as 79 localizações foram exibidas em um mapa interativo
-(folium), com cada zona representada por uma cor:
+O DataFrame tem 4 colunas de data, todas com hora embutida:
 
-  - Centro = cinza
-  - Norte  = azul-escuro
-  - Sul    = verde-escuro
-  - Leste  = vermelho
-  - Oeste  = vermelho-escuro
-  - Fora de SP = cinza-claro
+  - installation_date (data de instalação)
+  - registration_date (data de registro no sistema)
+  - last_transmission (última transmissão de dados)
+  - inactive_since (quando foi marcada como inativa)
 
-Cada marcador mostra o nome da estação e a sua zona (popup), e o mapa
-foi salvo em cemaden_stations_map.html para visualização no navegador.
+Uma descoberta importante desta análise: a coluna inactive_since
+NÃO significa "desativada permanentemente". Ela registra a última
+falha de comunicação da estação. Muitas estações transmitiram
+DEPOIS da data registrada em inactive_since, ou seja, voltaram a
+operar.
+
+Verificação feita:
+
+    df_cemaden_station["transmitiu_apos_inativacao"] = (
+        df_cemaden_station["last_transmission"]
+        > df_cemaden_station["inactive_since"]
+    )
+
+Resultado: 51 estações transmitiram depois de inactive_since
+(reativadas), e 28 não transmitiram (inativas de verdade).
+
+
+---------------------------------------------------------------------
+9. CLASSIFICAÇÃO DE STATUS (REATIVADA / INATIVA)
+---------------------------------------------------------------------
+A partir dessa descoberta, criamos uma coluna "status" para cada
+estação:
+
+    df_cemaden_station["status"] = df_cemaden_station.apply(
+        lambda r: "reativada"
+        if r["last_transmission"] > r["inactive_since"]
+        else "inativa",
+        axis=1,
+    )
+
+Interpretação:
+  - "reativada" → a estação teve falha, foi marcada como inativa,
+    mas voltou a transmitir.
+  - "inativa"   → a estação teve falha e NÃO voltou mais.
+
+Total:
+  - 51 estações reativadas
+  - 28 estações inativas
+
+
+---------------------------------------------------------------------
+10. AGRUPAMENTO POR ZONA
+---------------------------------------------------------------------
+Com o status definido, agrupamos as estações por zona para ver
+quantas reativaram e quantas ficaram inativas em cada região:
+
+    group_zona = (
+        df_cemaden_station
+        .groupby("zona")
+        .agg(
+            qtd_estacoes=("id_estacao", "count"),
+            reativadas=("status", lambda x: (x == "reativada").sum()),
+            inativas=("status", lambda x: (x == "inativa").sum()),
+        )
+        .sort_values("qtd_estacoes", ascending=False)
+    )
+
+    group_zona["pct_reativada"] = (
+        group_zona["reativadas"] / group_zona["qtd_estacoes"] * 100
+    ).round(1)
+
+    group_zona["pct_inativa"] = (
+        group_zona["inativas"] / group_zona["qtd_estacoes"] * 100
+    ).round(1)
+
+O resultado mostra, por zona:
+  - quantidade total de estações
+  - quantas reativaram
+  - quantas ficaram inativas
+  - percentual de cada caso
+
+Isso ajuda a identificar quais zonas têm rede mais resiliente
+(aquelas com alto percentual de reativadas) e quais têm mais
+estações abandonadas.
+
+
+---------------------------------------------------------------------
+11. OUTRAS ANÁLISES POSSÍVEIS
+---------------------------------------------------------------------
+Além do agrupamento por zona, foi possível calcular:
+
+  - dias_entre_inativacao_e_transmissao: quantos dias se passaram
+    entre a inativação e a volta da transmissão (só faz sentido para
+    estações reativadas).
+
+    df_cemaden_station["dias_entre_inativacao_e_transmissao"] = (
+        df_cemaden_station["last_transmission"]
+        - df_cemaden_station["inactive_since"]
+    ).dt.days
+
+    Valores:
+      - Positivo → reativada (voltou depois da falha)
+      - Zero → voltou no mesmo dia
+      - Negativo → inativa (não voltou)
+
+  - Distribuição por zona e por status (crosstab).
+  - Distribuição por ano de inativação.
+  - Mapa interativo com cores por status (reativada = verde,
+    inativa = vermelho).
+
+
+---------------------------------------------------------------------
+12. RESULTADO DA PRIMEIRA ANÁLISE
+---------------------------------------------------------------------
+  - 79 estações do CEMADEN em São Paulo estudadas;
+  - coluna "zona" acrescentada ao DataFrame após o cruzamento com
+    o GeoJSON oficial das subprefeituras;
+  - coluna "status" classificando cada estação como reativada ou
+    inativa, a partir da comparação entre last_transmission e
+    inactive_since;
+  - agrupamento por zona mostrando quantas estações reativaram e
+    quantas ficaram inativas em cada região;
+  - mapa interativo gerado com folium (cores por zona e/ou status).
 
 =====================================================================
 FIM
