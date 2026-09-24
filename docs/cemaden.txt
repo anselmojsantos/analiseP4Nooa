@@ -209,16 +209,3 @@ Os principais resultados são:
 - mapa das estações com indicação de leitura;
 - mapa das estações classificadas por zona.
 
-Esta etapa ainda não realiza análise estatística de precipitação, cálculo de acumulados, identificação de eventos extremos ou correlação com o NOAA. Também não inclui os dados da ANA. Essas análises dependem da validação final das unidades, da cobertura temporal, da qualidade dos valores observados e da padronização das bases.
-
-16. Próximos passos
-
-1. Confirmar a cobertura temporal e as unidades de cada sensor;
-2. validar valores ausentes, duplicados e leituras fora do domínio esperado;
-3. verificar a consistência das coordenadas das estações;
-4. comparar a quantidade de estações cadastradas com a quantidade de estações com leitura;
-5. agregar as leituras por estação, zona e período;
-6. calcular indicadores de chuva e temperatura conforme o tipo de sensor;
-7. integrar os dados consolidados com os índices Niño do NOAA;
-8. incluir as tabelas ana_station e ana_telemetry_reading quando os dados estiverem disponíveis;
-9. analisar correlações, defasagens temporais e diferenças entre zonas de São Paulo.
