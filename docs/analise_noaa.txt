@@ -1,0 +1,80 @@
+ANÁLISE EXPLORATÓRIA DAS BASES NOAA_ENSO_WEEKLY E DO CEMADEN
+['ana_telemetry_reading', 'cemaden_sensor', 'cemaden_station', 'cemaden_reading', 'noaa_enso_weekly', 'ana_station']
+
+1. Objetivo
+
+Este trabalho tem como objetivo explorar e preparar os dados climáticos do NOAA e do CEMADEN para análises integradas sobre a variabilidade climática do Pacífico e seus possíveis efeitos na região estudada.
+
+A base NOAA contém séries temporais dos índices Niño 1+2, Niño 3, Niño 3.4 e Niño 4. Esses índices representam anomalias da temperatura da superfície do mar em diferentes áreas do Pacífico. A análise busca compreender a variação desses índices, identificar períodos de aquecimento e resfriamento e preparar uma base consistente para futuros cruzamentos com dados locais de chuva e temperatura.
+
+No CEMADEN, o objetivo é organizar as leituras das estações, relacioná-las aos sensores e preservar as informações geográficas e operacionais necessárias para análises por estação e por região.
+
+2. Bases e tabelas consideradas
+
+O projeto considera as seguintes tabelas:
+
+- ana_telemetry_reading: leituras de telemetria da ANA;
+- cemaden_sensor: cadastro e descrição dos sensores do CEMADEN;
+- cemaden_station: cadastro das estações do CEMADEN;
+- cemaden_reading: leituras realizadas pelos sensores do CEMADEN;
+- noaa_enso_weekly: série semanal dos índices Niño disponibilizados pelo NOAA;
+- ana_station: cadastro das estações da ANA.
+
+No momento, os dados da ANA ainda não estão disponíveis para análise. Portanto, as tabelas ana_telemetry_reading e ana_station fazem parte do modelo previsto para a integração futura, mas não foram utilizadas nos resultados atuais.
+
+As tabelas do CEMADEN e a tabela noaa_enso_weekly são as fontes consideradas nesta etapa. A integração entre as fontes locais e os índices oceânicos ainda será realizada depois da validação e da padronização das bases.
+
+3. Tratamento inicial da base NOAA
+
+O notebook nooa.ipynb realiza as seguintes operações sobre noaa_enso_weekly:
+
+- leitura do arquivo CSV local;
+- uso de ponto e vírgula como separador e vírgula como separador decimal;
+- conversão de observation_date para o tipo de data;
+- ordenação cronológica das observações;
+- verificação da quantidade de linhas;
+- verificação de duplicatas por data;
+- identificação de datas nulas;
+- identificação do intervalo temporal da série;
+- inspeção dos tipos das colunas;
+- contagem de valores ausentes;
+- geração de estatísticas descritivas para nino12, nino3, nino34 e nino4.
+
+Durante a leitura, os índices numéricos também são convertidos explicitamente para números. Essa etapa é necessária porque valores com vírgula decimal podem ser carregados como texto dependendo do formato do arquivo.
+
+4. Cálculo do RONI/3.4
+
+Após a validação inicial, o índice nino34 é agrupado por mês. Para cada mês é calculada a média da anomalia da temperatura da superfície do mar na região Niño 3.4.
+
+O procedimento segue a lógica operacional utilizada para o ONI: a série mensal é suavizada por uma média móvel de três meses. Para cada posição da série, são combinadas as médias do mês atual e dos dois meses anteriores. Assim, o valor representa uma temporada de três meses, e não uma observação isolada.
+
+As temporadas são sobrepostas. Por exemplo, uma sequência mensal pode formar as janelas DJF, JFM, FMA, MAM e assim por diante. Cada nova temporada avança um mês e reutiliza dois meses da temporada anterior. Essa sobreposição reduz a influência de oscilações semanais ou mensais muito pontuais e permite acompanhar a persistência do aquecimento ou resfriamento do Pacífico.
+
+No código, a média móvel é calculada com `rolling(window=3, min_periods=3)`. Por isso, os dois primeiros meses da série não produzem um índice válido: ainda não existem três meses disponíveis para formar a primeira média. Esses valores incompletos são removidos da tabela final.
+
+O resultado é apresentado no notebook como RONI/3.4, acompanhado da temporada de três meses correspondente. Tecnicamente, o cálculo atual é uma média móvel de três meses do `nino34`, portanto segue a estrutura do ONI. O RONI propriamente dito (Relative Oceanic Niño Index) exige uma etapa adicional: subtrair da anomalia do Niño 3.4 a anomalia média dos trópicos globais, geralmente na faixa de 20°S a 20°N. Como essa série tropical de referência não está disponível na base utilizada, o notebook ainda não calcula o RONI relativo completo; ele produz um índice operacional baseado no Niño 3.4.
+
+Os valores são classificados segundo os limites utilizados para a interpretação das fases do ENSO:
+
+- valor maior ou igual a +0,5 °C: El Niño;
+- valor menor ou igual a -0,5 °C: La Niña;
+- valor entre os dois limites: Neutro.
+
+Esses limites são aplicados ao valor da média móvel de três meses, e não diretamente a cada observação semanal. A classificação é uma forma operacional de organizar a série. A confirmação de um evento oficial exige que o limiar seja mantido por várias temporadas consecutivas, além da consideração de outros critérios da NOAA; uma única temporada acima ou abaixo do limite não caracteriza, sozinha, um episódio oficial.
+
+O resultado do cálculo é exportado para um arquivo CSV com a temporada, o RONI/3.4 e a fase classificada.
+
+5. Análises exploratórias realizadas
+
+Além do cálculo do RONI/3.4, o notebook produz:
+
+- gráfico do RONI/3.4 por temporadas de três meses;
+- linhas de referência nos limites de +0,5 °C, -0,5 °C e 0 °C;
+- tabela com as regiões Niño, suas coordenadas aproximadas e descrição;
+- distribuição das observações semanais em El Niño, La Niña e Neutro para cada região;
+- exportação da tabela de distribuição para CSV;
+- série temporal mensal das anomalias das regiões Niño 1+2, Niño 3, Niño 3.4 e Niño 4;
+- visualização espacial esquemática das regiões do Pacífico, com cor relacionada à anomalia média e à classificação.
+
+Os percentuais da tabela de distribuição são armazenados no CSV como valores numéricos fracionários. Por exemplo, 0,0833 representa 8,33%. Isso evita que ferramentas como o Power Query interpretem incorretamente textos no formato 8.33% quando o separador decimal esperado é a vírgula.
+

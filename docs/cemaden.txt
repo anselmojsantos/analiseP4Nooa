@@ -1,0 +1,224 @@
+ANÁLISE EXPLORATÓRIA DA BASE CEMADEN
+
+1. Objetivo
+
+Este notebook reúne a etapa inicial de exploração dos dados do CEMADEN para o município de São Paulo. O objetivo é carregar, integrar e validar as tabelas de leituras, estações e sensores, preparando uma base consolidada para análises temporais, espaciais e climáticas.
+
+A análise procura responder às seguintes questões:
+
+- quais leituras estão disponíveis;
+- quais sensores estão associados às leituras;
+- quais estações estão cadastradas;
+- quais estações possuem registros de leitura;
+- quais informações de localização podem ser extraídas;
+- como as estações se distribuem pelas zonas de São Paulo;
+- como os dados podem ser organizados para análises posteriores de precipitação e outros fenômenos meteorológicos.
+
+A etapa é exploratória. Portanto, os resultados servem para compreender a estrutura, a cobertura e a qualidade inicial dos dados antes de realizar análises estatísticas ou cruzamentos com o NOAA e com outras fontes.
+
+2. Tabelas utilizadas
+
+O notebook acessa o banco de dados PostgreSQL e carrega as seguintes tabelas:
+
+- cemaden_reading: registros das leituras realizadas pelos sensores;
+- cemaden_station: cadastro, localização e informações operacionais das estações;
+- cemaden_sensor: cadastro e descrição dos sensores.
+
+As tabelas da ANA fazem parte do modelo geral do projeto, mas ainda não são utilizadas neste notebook porque os dados ana_station e ana_telemetry_reading ainda não estão disponíveis.
+
+3. Estratégia de análise
+
+A estratégia foi organizada nas seguintes etapas:
+
+1. estabelecer a conexão com o banco de dados;
+2. verificar as tabelas disponíveis;
+3. carregar as tabelas cemaden_reading, cemaden_station e cemaden_sensor;
+4. inspecionar os primeiros registros e a quantidade de linhas;
+5. extrair informações do campo raw_payload;
+6. padronizar as chaves utilizadas nos relacionamentos;
+7. validar a associação entre leituras e sensores;
+8. integrar as tabelas de leitura e sensor;
+9. verificar a continuidade e a unicidade dos identificadores;
+10. validar a associação entre leituras e estações;
+11. integrar o tipo da estação à base consolidada;
+12. exportar a base resultante para CSV;
+13. gerar mapas das estações;
+14. associar as estações às zonas geográficas de São Paulo.
+
+4. Conexão e carregamento dos dados
+
+O notebook importa pandas, SQLAlchemy e os recursos necessários para inspeção do banco. A conexão é criada com create_engine e as tabelas disponíveis são consultadas com inspect(engine).
+
+Em seguida, são executadas consultas SQL para carregar as três tabelas principais em DataFrames:
+
+- df_reading;
+- df_station;
+- df_sensor.
+
+A quantidade de registros de cada tabela é apresentada para permitir uma primeira verificação da dimensão das fontes carregadas.
+
+Também é exibida uma amostra de df_reading e df_sensor para conhecer os nomes das colunas, os tipos de informação e a estrutura dos registros.
+
+5. Tratamento do campo raw_payload
+
+A tabela de leituras contém um campo raw_payload com informações complementares em formato estruturado. O notebook extrai desse campo os seguintes valores:
+
+- nome da estação;
+- unidade federativa;
+- latitude;
+- longitude.
+
+Antes da inclusão, as colunas nome, uf, latitude e longitude são removidas caso já existam. Depois, são reinseridas em posições próximas de sensor_id, facilitando a leitura da tabela.
+
+Ao final desse tratamento, o campo raw_payload é removido da base de leituras, pois as informações relevantes já foram transformadas em colunas próprias.
+
+Essa transformação torna os dados mais adequados para filtros, junções, análises estatísticas e visualizações geográficas.
+
+6. Validação da relação entre leituras e sensores
+
+Para verificar a compatibilidade das chaves, os campos df_reading['sensor_id'] e df_sensor['id'] são convertidos para texto e têm seus espaços removidos.
+
+Depois, cada sensor_id das leituras é comparado com os valores existentes na coluna id da tabela de sensores. O notebook calcula quantas leituras possuem um sensor correspondente e apresenta esse total em relação ao número total de leituras.
+
+Essa verificação permite identificar possíveis problemas de integração, como:
+
+- leituras com sensor inexistente;
+- identificadores armazenados com tipos diferentes;
+- espaços indevidos nos códigos;
+- falhas no cadastro dos sensores.
+
+7. Integração entre leituras e sensores
+
+As tabelas df_reading e df_sensor são integradas por meio de uma junção à esquerda:
+
+- chave da leitura: sensor_id;
+- chave do cadastro: id.
+
+A junção utiliza validate='many_to_one'. Isso indica que várias leituras podem pertencer ao mesmo sensor, mas cada sensor deve aparecer como um único registro no cadastro.
+
+O resultado é armazenado em df_cemaden. A coluna description é reposicionada para ficar próxima das informações de localização, facilitando a interpretação do tipo de medição realizada.
+
+As colunas técnicas id_sensor e collected_at_sensor são removidas. Em seguida, os nomes id_reading e collected_at_reading são simplificados para id e collected_at.
+
+Essa etapa cria uma base de leituras enriquecida com a descrição do sensor.
+
+8. Verificação dos identificadores das leituras
+
+Depois da primeira integração, o notebook verifica:
+
+- quantidade total de linhas em df_cemaden;
+- maior identificador de leitura;
+- quantidade de identificadores únicos;
+- quantidade estimada de lacunas na sequência de identificadores.
+
+Essa análise não considera automaticamente uma lacuna como erro, porque identificadores podem ser gerados por sequências que possuem registros excluídos ou intervalos reservados. O objetivo é apenas identificar a situação para investigação posterior.
+
+9. Validação da relação entre leituras e estações
+
+A relação entre leituras e estações é verificada comparando df_reading['station_code'] com df_station['station_code'].
+
+O notebook calcula:
+
+- quantas leituras possuem estação cadastrada;
+- quais códigos de estação aparecem nas leituras sem cadastro correspondente;
+- quantas estações possuem pelo menos uma leitura;
+- quantas estações estão cadastradas no total;
+- quantas estações cadastradas não possuem leitura;
+- se o conjunto de estações das leituras está contido no conjunto de estações cadastradas.
+
+Também é exibida uma amostra da tabela de estações e o conteúdo inicial de raw_payload para inspeção da estrutura cadastral.
+
+10. Tipos de estação e consolidação final
+
+A coluna station_type_description é analisada com value_counts para identificar a distribuição dos tipos de estação cadastrados.
+
+Depois, essa descrição é incorporada a df_cemaden por meio de uma junção à esquerda usando station_code. A junção também utiliza validate='many_to_one', pois várias leituras podem pertencer à mesma estação, mas cada estação deve possuir um único tipo cadastrado.
+
+A coluna station_type_description é posicionada próxima à descrição do sensor. A base consolidada é exportada para:
+
+docs/cemaden.csv
+
+Esse arquivo reúne as informações necessárias para as próximas análises, incluindo leitura, sensor, estação, localização, descrição e tipo de estação.
+
+11. Indicador de estação com leitura
+
+O notebook cria a coluna tem_leitura para indicar se o código da estação aparece no conjunto de estações associadas às leituras consolidadas.
+
+Esse indicador pode ser utilizado em tabelas e mapas para diferenciar estações com registros disponíveis de estações sem leitura. A regra deverá ser revisada caso a base cadastral completa de estações seja incorporada diretamente à visualização final, garantindo que a comparação use todas as estações cadastradas e não apenas as estações já presentes na base de leituras.
+
+12. Mapa das estações
+
+O primeiro mapa é criado com Folium e utiliza a média das latitudes e longitudes das estações como centro inicial.
+
+Cada estação é representada por um marcador geográfico. A lógica definida no notebook utiliza:
+
+- marcador azul para estação cadastrada com leitura;
+- marcador vermelho para estação sem leitura.
+
+O nome da estação e a situação de leitura são apresentados no popup e no tooltip dos marcadores.
+
+O mapa é salvo em:
+
+cemaden_stations_map.html
+
+Esse resultado permite verificar visualmente a distribuição das estações e serve como apoio à validação espacial dos dados.
+
+13. Classificação por zona de São Paulo
+
+Para classificar as estações por zona, o notebook carrega o arquivo zonas_sp.geojson com GeoPandas.
+
+As geometrias das zonas são reprojetadas para o sistema EPSG:31983, que utiliza unidades métricas. Em seguida, é aplicado um buffer de 40 metros. O objetivo é incluir a estação Cidade Tiradentes 2, localizada aproximadamente 34 metros fora do limite original da zona Leste.
+
+Depois do buffer, as geometrias retornam ao sistema EPSG:4326, compatível com latitude e longitude.
+
+As estações são transformadas em pontos geográficos a partir das colunas longitude e latitude. Em seguida, é executada uma junção espacial com predicate='within'. Cada estação recebe a zona correspondente; quando não há correspondência, a zona é preenchida como Fora de SP.
+
+O resultado é armazenado em df_station_sp, sem as colunas geométricas auxiliares, e a distribuição das estações por zona é apresentada com value_counts.
+
+14. Mapa das estações por zona
+
+Com base em df_station_sp, é criado um segundo mapa interativo. As zonas recebem cores específicas:
+
+- Centro: cinza;
+- Norte: azul escuro;
+- Sul: verde escuro;
+- Leste: vermelho;
+- Oeste: vermelho escuro;
+- Fora de SP: cinza claro.
+
+Cada estação recebe um marcador na cor de sua zona. O popup apresenta o nome da estação e a zona geográfica correspondente.
+
+O mapa é salvo em:
+
+stations_map.html
+
+Essa visualização permite avaliar a distribuição espacial das estações e identificar estações localizadas fora dos limites esperados do município.
+
+15. Resultados e limitações da etapa
+
+O notebook produz uma base consolidada do CEMADEN, dois arquivos CSV ou HTML de apoio e verificações iniciais das relações entre leituras, sensores e estações.
+
+Os principais resultados são:
+
+- integração das leituras com a descrição dos sensores;
+- integração das leituras com o tipo das estações;
+- verificação dos vínculos entre códigos de sensor e estação;
+- análise inicial dos identificadores das leituras;
+- distribuição dos tipos de estação;
+- exportação de docs/cemaden.csv;
+- mapa das estações com indicação de leitura;
+- mapa das estações classificadas por zona.
+
+Esta etapa ainda não realiza análise estatística de precipitação, cálculo de acumulados, identificação de eventos extremos ou correlação com o NOAA. Também não inclui os dados da ANA. Essas análises dependem da validação final das unidades, da cobertura temporal, da qualidade dos valores observados e da padronização das bases.
+
+16. Próximos passos
+
+1. Confirmar a cobertura temporal e as unidades de cada sensor;
+2. validar valores ausentes, duplicados e leituras fora do domínio esperado;
+3. verificar a consistência das coordenadas das estações;
+4. comparar a quantidade de estações cadastradas com a quantidade de estações com leitura;
+5. agregar as leituras por estação, zona e período;
+6. calcular indicadores de chuva e temperatura conforme o tipo de sensor;
+7. integrar os dados consolidados com os índices Niño do NOAA;
+8. incluir as tabelas ana_station e ana_telemetry_reading quando os dados estiverem disponíveis;
+9. analisar correlações, defasagens temporais e diferenças entre zonas de São Paulo.
