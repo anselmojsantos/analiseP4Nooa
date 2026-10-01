@@ -1,0 +1,88 @@
+---
+import Sidebar from '../components/nav/Sidebar.astro';
+
+interface Props {
+	/** Título exibido na barra superior e em <title>. */
+	title: string;
+	/** Rota ativa, para marcar o item da navegação. */
+	current: string;
+}
+
+const { title, current } = Astro.props;
+---
+
+<div class="flex min-h-[100dvh]">
+	<Sidebar current={current} />
+
+	<div
+		id="nav-backdrop"
+		class="pointer-events-none fixed inset-0 z-30 bg-black/40 opacity-0 transition-opacity duration-300 ease-out motion-reduce:duration-100 md:hidden"
+		aria-hidden="true"
+	></div>
+
+	<main class="flex min-w-0 flex-1 flex-col bg-bg">
+		<header
+			class="sticky top-0 z-20 flex items-center gap-3 bg-bg p-4 md:static md:p-6 md:pb-0"
+		>
+			<button
+				id="nav-toggle"
+				type="button"
+				aria-expanded="false"
+				aria-controls="nav"
+				class="-ml-1 grid size-11 shrink-0 place-items-center rounded-pill text-deep hover:bg-soft md:hidden"
+			>
+				<span class="sr-only">Abrir menu</span>
+				<svg
+					width="20"
+					height="20"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					aria-hidden="true"
+				>
+					<path d="M3 6h18M3 12h18M3 18h18"></path>
+				</svg>
+			</button>
+
+			<span aria-hidden="true" class="size-3.5 rounded-pill bg-deep"></span>
+			<span class="text-xl font-semibold leading-6 text-deep">ClimaSP</span>
+			<span class="hidden text-[15px] text-ink-secondary sm:inline">{title}</span>
+		</header>
+
+		<div class="flex flex-1 flex-col gap-4 p-4 md:p-6 md:pt-4">
+			<div class="mx-auto flex w-full max-w-[1200px] flex-col gap-4">
+				<slot />
+			</div>
+		</div>
+	</main>
+</div>
+
+<script>
+	const toggle = document.getElementById('nav-toggle');
+	const close = document.getElementById('nav-close');
+	const nav = document.getElementById('nav');
+	const backdrop = document.getElementById('nav-backdrop');
+
+	const setOpen = (open: boolean) => {
+		toggle?.setAttribute('aria-expanded', String(open));
+		if (nav) nav.dataset.open = String(open);
+		if (backdrop) {
+			backdrop.style.opacity = open ? '1' : '0';
+			backdrop.style.pointerEvents = open ? 'auto' : 'none';
+		}
+		document.documentElement.classList.toggle('overflow-hidden', open);
+	};
+
+	toggle?.addEventListener('click', () => {
+		setOpen(toggle.getAttribute('aria-expanded') !== 'true');
+	});
+	close?.addEventListener('click', () => setOpen(false));
+	backdrop?.addEventListener('click', () => setOpen(false));
+	document.addEventListener('keydown', (event) => {
+		if (event.key === 'Escape') setOpen(false);
+	});
+
+	document.addEventListener('astro:before-swap', () => setOpen(false));
+</script>
