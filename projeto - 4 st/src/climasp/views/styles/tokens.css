@@ -1,0 +1,77 @@
+/*
+ * tokens.css — Design System 00 do .pen
+ *
+ * Fonte única de verdade dos valores. Nenhum estilo aqui: apenas declaração.
+ * Consumido por layout.css e pelos templates de views/templates/.
+ */
+
+:root {
+  /* --- Paleta neutra: fundo, superfícies e texto --- */
+  --bg: #ffffff;
+  --soft: #f7f8fa;
+  --line: #eef0f2;
+  --ink: #1a1a1a;
+  --deep: #0e3a5d;
+  --border-strong: #e4e7eb;
+  --text-secondary: #666666;
+  --muted: #888888;
+  --on-dark: #ffffff;
+
+  /* --- Cores de dados: semântica fria -> neutra -> quente --- */
+  --cold: #1565c0;
+  --neutral: #8a9099;
+  --warm: #cb182b;
+  --amber: #e9a13b;
+  --green: #2e9e5b;
+  --accent: #4a9fd8;
+
+  /* --- Navegação --- */
+  --sidebar-soft: #9db8cf;
+  --sidebar-active: #1d4e77;
+  --sidebar-dot: #5a7e9e;
+  --sidebar-label: #c7d8e6;
+
+  /* --- Tipografia --- */
+  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "Geist Mono", ui-monospace, "SFMono-Regular", "Cascadia Mono", monospace;
+
+  /* Escala Inter 40/28/20/16 */
+  --text-display: 40px;
+  --text-h1: 28px;
+  --text-h2: 20px;
+  --text-body: 16px;
+  --text-small: 14px;
+  --text-micro: 12px;
+
+  /* Pesos em uso */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* --- Espaçamento: base 4px --- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-12: 48px;
+
+  /* --- Raios: medidos nas telas, não no frame 00 --- */
+  --radius-row: 10px;
+  --radius-strip: 12px;
+  --radius-card: 16px;
+  --radius-panel: 24px;
+  --radius-pill: 999px;
+
+  /* --- Layout --- */
+  --sidebar-width: 220px;
+  --content-width: 1060px;
+
+  /* --- Transparências sobre $deep --- */
+  --on-deep-muted: rgb(255 255 255 / 72%);
+  --on-deep-faint: rgb(255 255 255 / 70%);
+  --on-deep-line: rgb(255 255 255 / 14%);
+  --on-deep-strip: rgb(255 255 255 / 8%);
+}

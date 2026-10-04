@@ -1,0 +1,25 @@
+---
+/**
+ * Percurso do estudo em quatro chips + a linha de procedência das fontes.
+ *
+ * O Pen fixa a largura dos chips no desktop (140/150/200/210, duas linhas) e
+ * deixa a largura automática com wrap no mobile. Aqui vai sempre automático: no
+ * desktop os quatro somam ~700px contra 548px disponíveis e quebram em duas
+ * linhas sozinho, então o resultado é o mesmo sem guardar quatro números mágicos.
+ */
+import { FLUXO, NOTA_FONTES } from "../data/fluxo";
+---
+
+<ol class="m-0 flex list-none flex-wrap gap-2 p-0">
+  {
+    FLUXO.map((passo) => (
+      <li class="rounded-full bg-soft px-2 py-2 text-[12px] leading-[1.1] font-medium text-ink-secondary">
+        {passo}
+      </li>
+    ))
+  }
+</ol>
+
+<p class="mt-3 mb-0 text-[13px] leading-[1.4] text-data-neutral xl:text-[14px]">
+  {NOTA_FONTES}
+</p>

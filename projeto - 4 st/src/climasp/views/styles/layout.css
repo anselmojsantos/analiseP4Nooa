@@ -1,0 +1,550 @@
+/*
+ * layout.css — componentes de layout do Design System 00
+ *
+ * Cada bloco corresponde a um componente do .pen. As classes são consumidas
+ * pelos templates em views/templates/ via st.html.
+ *
+ * Seções:
+ *   1. Estrutura        shell, sidebar, conteúdo
+ *   2. Navegação        item de menu do .pen
+ *   3. Cabeçalho        topbar das telas internas
+ *   4. Seção            título + descrição
+ *   5. Grade            colunas responsivas
+ *   6. Superfície       cartão, cartão compacto
+ *   7. Indicador        KPI com valor em Geist Mono
+ *   8. Etiquetas        chip e selo de status
+ *   9. Painel escuro    leitura de sinal ENSO sobre $deep
+ *  10. Tabela
+ *  11. Flujo           etapas encadeadas
+ *  12. Medidas         legenda e nota de rodapé
+ *  13. Responsivo      900px e 480px
+ */
+
+/* ========== 1. Estrutura ========== */
+
+.ds-shell {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--bg);
+}
+
+.ds-shell__sidebar {
+  flex: 0 0 var(--sidebar-width);
+  width: var(--sidebar-width);
+  padding: var(--sp-4);
+  background-color: var(--deep);
+}
+
+.ds-shell__content {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: var(--content-width);
+  padding: var(--sp-6);
+  background-color: var(--bg);
+}
+
+/* Assinatura da marca, no topo do conteúdo. */
+.ds-brand {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+}
+
+.ds-brand__name {
+  font-size: var(--text-h2);
+  font-weight: var(--weight-semibold);
+  color: var(--deep);
+}
+
+.ds-brand__tagline {
+  font-size: 15px;
+  font-weight: var(--weight-regular);
+  color: var(--text-secondary);
+}
+
+/* ========== 2. Navegação ========== */
+
+.ds-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ds-nav__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  font-size: 15px;
+  font-weight: var(--weight-regular);
+  color: var(--sidebar-label);
+  text-decoration: none;
+  border-radius: var(--radius-row);
+}
+
+.ds-nav__dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  background-color: var(--sidebar-dot);
+  border-radius: var(--radius-pill);
+}
+
+.ds-nav__item--active {
+  color: var(--on-dark);
+  background-color: var(--sidebar-active);
+}
+
+.ds-nav__item--active .ds-nav__dot {
+  background-color: var(--accent);
+}
+
+.ds-nav__item:hover {
+  color: var(--on-dark);
+  background-color: rgb(255 255 255 / 6%);
+}
+
+/* Rodapé da sidebar: fontes do estudo. */
+.ds-nav__footer {
+  margin-top: auto;
+  font-family: var(--font-data);
+  font-size: 11px;
+  font-weight: var(--weight-regular);
+  color: var(--sidebar-soft);
+}
+
+/* ========== 3. Cabeçalho ========== */
+
+.ds-topbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--line);
+}
+
+.ds-topbar__title {
+  font-size: var(--text-h1);
+  font-weight: var(--weight-bold);
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.ds-topbar__meta {
+  font-size: var(--text-small);
+  font-weight: var(--weight-regular);
+  color: var(--muted);
+  text-align: right;
+}
+
+/* ========== 4. Seção ========== */
+
+.ds-section {
+  margin-top: var(--sp-8);
+}
+
+.ds-section__title {
+  margin: 0;
+  font-size: var(--text-h2);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+}
+
+.ds-section__subtitle {
+  margin: var(--sp-1) 0 var(--sp-4);
+  font-size: var(--text-body);
+  font-weight: var(--weight-regular);
+  color: var(--text-secondary);
+}
+
+/* ========== 5. Grade ========== */
+
+.ds-grid {
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.ds-grid--2 { grid-template-columns: repeat(2, 1fr); }
+.ds-grid--3 { grid-template-columns: repeat(3, 1fr); }
+.ds-grid--4 { grid-template-columns: repeat(4, 1fr); }
+.ds-grid--5 { grid-template-columns: repeat(5, 1fr); }
+
+/* Duas colunas de largura desigual, como o hero da tela 01. */
+.ds-split {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+}
+
+.ds-split__lead {
+  flex: 1 1 420px;
+  min-width: 0;
+}
+
+.ds-split__aside {
+  flex: 0 1 440px;
+  min-width: 0;
+}
+
+/* ========== 6. Superfície ========== */
+
+.ds-card {
+  padding: var(--sp-4);
+  background-color: var(--soft);
+  border-radius: var(--radius-card);
+}
+
+.ds-card--tight {
+  padding: 14px;
+}
+
+/* Sobre $deep, a separação vem da borda em $line. */
+.ds-card--outline {
+  background-color: var(--bg);
+  border: 1px solid var(--line);
+}
+
+.ds-card__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+}
+
+.ds-card__text {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--text-small);
+  font-weight: var(--weight-regular);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* ========== 7. Indicador ========== */
+
+.ds-kpi__label {
+  font-size: var(--text-small);
+  font-weight: var(--weight-regular);
+  color: var(--text-secondary);
+}
+
+.ds-kpi__value {
+  font-family: var(--font-data);
+  font-size: var(--text-h1);
+  font-weight: var(--weight-semibold);
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.ds-kpi__hint {
+  font-size: var(--text-micro);
+  font-weight: var(--weight-regular);
+  color: var(--muted);
+}
+
+/* Qualquer número em fonte de dados. */
+.ds-data {
+  font-family: var(--font-data);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+}
+
+/* ========== 8. Etiquetas ========== */
+
+.ds-chip {
+  display: inline-block;
+  padding: var(--sp-2) 12px;
+  font-size: var(--text-small);
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+  background-color: var(--soft);
+  border-radius: var(--radius-pill);
+}
+
+.ds-chip--outline {
+  background-color: var(--bg);
+}
+
+.ds-badge {
+  display: inline-block;
+  padding: 6px;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.02em;
+  color: var(--on-dark);
+  background-color: var(--neutral);
+  border-radius: var(--radius-pill);
+}
+
+.ds-badge--cold    { background-color: var(--cold); }
+.ds-badge--warm    { background-color: var(--warm); }
+.ds-badge--amber   { background-color: var(--amber); }
+.ds-badge--green   { background-color: var(--green); }
+.ds-badge--accent  { background-color: var(--accent); }
+
+/* Quadrado de 10px usado nas escalas de status. */
+.ds-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.ds-swatch--cold   { background-color: var(--cold); }
+.ds-swatch--neutral { background-color: var(--neutral); }
+.ds-swatch--warm   { background-color: var(--warm); }
+.ds-swatch--amber  { background-color: var(--amber); }
+.ds-swatch--green  { background-color: var(--green); }
+
+/* ========== 9. Painel escuro ========== */
+
+.ds-panel {
+  padding: var(--sp-4);
+  background-color: var(--deep);
+  border-radius: var(--radius-panel);
+}
+
+.ds-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.ds-panel__label {
+  font-size: 14px;
+  font-weight: var(--weight-semibold);
+  color: var(--on-dark);
+}
+
+.ds-panel__sub {
+  margin: var(--sp-3) 0;
+  font-size: 15px;
+  font-weight: var(--weight-semibold);
+  color: var(--on-dark);
+}
+
+.ds-panel__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-2) 0;
+  border-top: 1px solid var(--on-deep-line);
+}
+
+.ds-panel__row-label {
+  font-size: var(--text-micro);
+  font-weight: var(--weight-regular);
+  color: var(--on-deep-muted);
+}
+
+.ds-panel__row-value {
+  font-family: var(--font-data);
+  font-size: 24px;
+  font-weight: var(--weight-bold);
+  color: var(--on-dark);
+}
+
+.ds-panel__note {
+  margin: var(--sp-3) 0;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-regular);
+  line-height: 1.5;
+  color: var(--on-deep-faint);
+}
+
+.ds-panel__strip {
+  padding: 10px;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-regular);
+  line-height: 1.5;
+  color: var(--on-dark);
+  background-color: var(--on-deep-strip);
+  border-radius: var(--radius-strip);
+}
+
+/* ========== 10. Tabela ========== */
+
+.ds-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 var(--sp-2);
+  font-size: var(--text-small);
+}
+
+.ds-table th {
+  padding: 10px;
+  text-align: left;
+  font-weight: var(--weight-semibold);
+  color: var(--on-dark);
+  background-color: var(--deep);
+  border-radius: var(--radius-row);
+}
+
+.ds-table td {
+  padding: 10px;
+  color: var(--ink);
+  background-color: var(--bg);
+}
+
+.ds-table tbody tr:nth-child(even) td {
+  background-color: var(--soft);
+}
+
+/* Linha em destaque: região-guia do estudo. */
+.ds-table tbody tr.ds-row--lead td {
+  color: var(--on-dark);
+  background-color: var(--deep);
+}
+
+.ds-table__num {
+  font-family: var(--font-data);
+  font-weight: var(--weight-semibold);
+}
+
+/* ========== 11. Fluxo ========== */
+
+.ds-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+/* Numeral de etapa sobre disco. */
+.ds-step__number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin-bottom: var(--sp-2);
+  font-size: 15px;
+  font-weight: var(--weight-semibold);
+  color: var(--on-dark);
+  background-color: var(--deep);
+  border-radius: var(--radius-pill);
+}
+
+/* ========== 12. Medidas ========== */
+
+/* Faixa de legenda com três segmentos de cor. */
+.ds-legend {
+  display: flex;
+  gap: 0;
+  height: 12px;
+}
+
+.ds-legend__segment {
+  flex: 1 1 0;
+}
+
+/* Barra de trilha sobre $soft, usada nas barras anomalia por região. */
+.ds-track {
+  height: 14px;
+  background-color: var(--soft);
+  border-radius: 2px;
+}
+
+.ds-track__fill {
+  height: 100%;
+}
+
+.ds-track__fill--cold   { background-color: var(--cold); }
+.ds-track__fill--neutral { background-color: var(--neutral); }
+.ds-track__fill--warm   { background-color: var(--warm); }
+
+/* Faixa de metadados à esquerda de uma leitura. */
+.ds-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--text-small);
+  color: var(--muted);
+}
+
+.ds-figure {
+  padding: var(--sp-4);
+  background-color: var(--soft);
+  border-radius: var(--radius-card);
+}
+
+.ds-figure__caption {
+  margin: 0;
+  font-size: 11px;
+  font-weight: var(--weight-regular);
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.ds-note {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-regular);
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.ds-footer {
+  margin-top: var(--sp-12);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--line);
+  font-size: var(--text-small);
+  font-weight: var(--weight-regular);
+  color: var(--muted);
+}
+
+/* ========== 13. Responsivo ========== */
+
+/* Abaixo de 900px as grades colapsam; a sidebar vira o menu do frame Mobile. */
+@media (max-width: 900px) {
+  .ds-shell {
+    flex-direction: column;
+  }
+
+  .ds-shell__sidebar {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .ds-shell__content {
+    padding: var(--sp-4);
+  }
+
+  .ds-grid--3,
+  .ds-grid--4,
+  .ds-grid--5 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ds-topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-1);
+  }
+
+  .ds-topbar__meta {
+    text-align: left;
+  }
+}
+
+/* Alinhado ao frame "01 Boas Vindas — Mobile" de 390px. */
+@media (max-width: 480px) {
+  .ds-grid--2,
+  .ds-grid--3,
+  .ds-grid--4,
+  .ds-grid--5 {
+    grid-template-columns: 1fr;
+  }
+
+  .ds-brand {
+    flex-direction: column;
+    gap: var(--sp-1);
+  }
+
+  .ds-panel__row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-1);
+  }
+}

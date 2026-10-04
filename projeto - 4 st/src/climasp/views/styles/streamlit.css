@@ -1,0 +1,313 @@
+/*
+ * streamlit.css — ponte entre os tokens e o DOM do Streamlit
+ *
+ * O Streamlit não usa os components .ds-*: ele tem o próprio chrome
+ * (fundo, fonte, sidebar, widgets). Aqui esse chrome é reescrito com os
+ * tokens do Design System 00, para o app inteiro herdar a tipografia e a
+ * paleta do .pen sem depender de widget nativo.
+ *
+ * Carregado depois de tokens.css e layout.css, para vencer no especificidade.
+ */
+
+/* ========== Base: fundo e tipografia ========== */
+
+html,
+body,
+.stApp,
+[class*="css"],
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"],
+[data-testid="stHeader"],
+[data-testid="stBottom"],
+[data-testid="stToolbar"],
+[data-testid="stDecoration"] {
+  font-family: var(--font-ui);
+  color: var(--ink);
+}
+
+[data-testid="stAppViewContainer"],
+[data-testid="stHeader"],
+[data-testid="stToolbar"],
+[data-testid="stDecoration"] {
+  background-color: var(--bg);
+}
+
+/* O secundário do Streamlit é #F0F2F6; o design usa $soft. */
+[data-testid="stSidebar"],
+[data-testid="stVerticalBlockBorderWrapper"],
+[data-testid="stExpander"],
+[data-baseweb="popover"] > div {
+  background-color: var(--bg);
+}
+
+/* Títulos e texto do Markdown herdam a escala Inter 40/28/20/16. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-ui);
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: var(--text-display);
+  font-weight: var(--weight-bold);
+  line-height: 1.15;
+}
+
+h2 {
+  font-size: var(--text-h1);
+  font-weight: var(--weight-bold);
+  line-height: 1.2;
+}
+
+h3 {
+  font-size: var(--text-h2);
+  font-weight: var(--weight-semibold);
+}
+
+p,
+li,
+label,
+span {
+  font-family: var(--font-ui);
+  color: var(--ink);
+}
+
+small,
+.caption,
+[data-testid="stCaptionContainer"] {
+  font-size: var(--text-micro);
+  color: var(--muted);
+}
+
+/* ========== Chrome que não pertence ao design ========== */
+
+#MainMenu,
+footer,
+[data-testid="stStatusWidget"],
+[data-testid="stDecoration"] > div:first-child {
+  visibility: hidden;
+  height: 0;
+}
+
+/* Sem elevate: o Design System não define sombra. */
+.stButton button,
+.stDownloadButton button,
+.stFormSubmitButton button,
+.stLinkButton a,
+[data-baseweb="input"],
+[data-baseweb="select"] > div,
+[data-testid="stDataFrame"] * {
+  box-shadow: none;
+}
+
+.stButton button,
+.stDownloadButton button,
+.stFormSubmitButton button {
+  border-radius: var(--radius-row);
+}
+
+.stButton button[kind="primary"],
+.stFormSubmitButton button[kind="primary"] {
+  background-color: var(--deep);
+  border-color: var(--deep);
+}
+
+.stButton button[kind="primary"]:hover,
+.stFormSubmitButton button[kind="primary"]:hover {
+  background-color: var(--sidebar-active);
+  border-color: var(--sidebar-active);
+}
+
+.stButton button[kind="secondary"] {
+  color: var(--deep);
+  background-color: var(--bg);
+  border-color: var(--border-strong);
+}
+
+/* ========== Layout do app ========== */
+
+.block-container {
+  max-width: var(--content-width);
+  padding-top: var(--sp-6);
+  padding-bottom: var(--sp-8);
+}
+
+/* ========== Sidebar em $deep ========== */
+
+/* A sidebar em $deep é forçada aqui, e não no secondaryBackgroundColor do
+   config.toml: essa cor pinta também as superfícies internas dos itens de
+   menu, o que duplica o realce do item ativo. */
+[data-testid="stSidebar"],
+[data-testid="stSidebar"] > div,
+[data-testid="stSidebarContent"],
+[data-testid="stSidebarUserContent"] {
+  background-color: var(--deep) !important;
+}
+
+[data-testid="stSidebar"] {
+  width: var(--sidebar-width) !important;
+  min-width: var(--sidebar-width) !important;
+  border-right: none;
+}
+
+/* O container interno precisa do mesmo limite de largura: forçar só a casca
+   deixaria o conteúdo com a largura original do Streamlit e geraria scroll.
+   O box-sizing evita que padding + width:100% dos filhos estourem a barra. */
+[data-testid="stSidebar"] > div,
+[data-testid="stSidebarContent"],
+[data-testid="stSidebarUserContent"] {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+
+[data-testid="stSidebarUserContent"] {
+  padding: var(--sp-4) !important;
+  overflow-x: hidden;
+}
+
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"],
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"],
+[data-testid="stSidebar"] label {
+  color: var(--on-dark);
+}
+
+/* Item de menu: ponto de 8px + rótulo, como o componente do .pen.
+   O seletor precisa alcançar os filhos: o Streamlit põe a cor do rótulo em
+   um nó interno do link, que venceria a regra só no `a`.
+   O fundo é aplicado apenas no `a` — painted nos filhos, duplica o realce. */
+[data-testid="stSidebarNav"] a,
+[data-testid="stSidebarNav"] a span,
+[data-testid="stSidebarNav"] a div {
+  color: var(--sidebar-label);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: var(--weight-regular);
+  background-color: transparent;
+}
+
+[data-testid="stSidebarNav"] a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  text-decoration: none;
+  border-radius: var(--radius-row);
+}
+
+[data-testid="stSidebarNav"] a::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  background-color: var(--sidebar-dot);
+  border-radius: var(--radius-pill);
+}
+
+/* O Pen não usa ícone no menu — só o ponto. O Streamlit renderiza um SVG
+   por padrão; escondido para não duplicar o marcador. */
+[data-testid="stSidebarNav"] a svg {
+  display: none !important;
+}
+
+[data-testid="stSidebarNav"] a:hover,
+[data-testid="stSidebarNav"] a:hover span,
+[data-testid="stSidebarNav"] a:hover div {
+  color: var(--on-dark);
+}
+
+[data-testid="stSidebarNav"] a:hover {
+  background-color: rgb(255 255 255 / 6%);
+}
+
+[data-testid="stSidebarNav"] a[aria-current="page"],
+[data-testid="stSidebarNav"] a[aria-current="page"] span,
+[data-testid="stSidebarNav"] a[aria-current="page"] div {
+  color: var(--on-dark);
+}
+
+[data-testid="stSidebarNav"] a[aria-current="page"] {
+  background-color: var(--sidebar-active);
+}
+
+[data-testid="stSidebarNav"] a[aria-current="page"]::before {
+  background-color: var(--accent);
+}
+
+/* Marca acima do menu e fontes no rodapé, como no .pen. */
+[data-testid="stSidebarUserContent"],
+[data-testid="stSidebarContent"] {
+  display: flex;
+  flex-direction: column;
+}
+
+[data-testid="stSidebarNav"] {
+  order: 2;
+}
+
+[data-testid="stElementContainer"]:has(> div > .ds-sidebar__brand) {
+  order: 1;
+  margin-bottom: var(--sp-4);
+}
+
+[data-testid="stElementContainer"]:has(> div > .ds-sidebar__sources) {
+  order: 3;
+  margin-top: auto;
+  padding-top: var(--sp-6);
+}
+
+.ds-sidebar__logo {
+  font-size: 18px;
+  font-weight: var(--weight-bold);
+  color: var(--on-dark);
+}
+
+.ds-sidebar__subtitle {
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: var(--weight-regular);
+  color: var(--sidebar-soft);
+}
+
+.ds-sidebar__sources {
+  font-family: var(--font-data);
+  font-size: 11px;
+  font-weight: var(--weight-regular);
+  color: var(--sidebar-soft);
+}
+
+/* ========== Comportamento da sidebar ========== */
+
+/* No desktop a navegação é persistente: some com os controles que a
+   transformariam em gaveta. No mobile o hamburger continua, como no .pen. */
+@media (min-width: 901px) {
+  [data-testid="stSidebarCollapsedControl"],
+  [data-testid="stExpandSidebarButton"],
+  [data-testid="stSidebarHeader"] button {
+    display: none !important;
+  }
+}
+
+/* ========== Widgets: token de interação ========== */
+
+[data-baseweb="tab-list"] [role="tab"][aria-selected="true"],
+[data-testid="stSegmentedControl"] [aria-checked="true"] {
+  color: var(--on-dark);
+  background-color: var(--sidebar-active);
+}
+
+[data-baseweb="input"]:focus-within,
+[data-baseweb="select"] > div:focus-within {
+  border-color: var(--accent);
+}
+
+hr,
+[data-testid="stDivider"] {
+  border-color: var(--line);
+}

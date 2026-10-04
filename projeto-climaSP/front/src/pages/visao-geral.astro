@@ -1,0 +1,114 @@
+---
+import Base from "../layouts/Base.astro";
+
+const baseApi = import.meta.env.PUBLIC_API_URL ?? "http://localhost:3333";
+---
+
+<Base titulo="Visão Geral">
+	<section class="mt-8 max-w-5xl" aria-labelledby="ultima-leitura-titulo" data-enso>
+		<div class="flex flex-wrap items-end justify-between gap-4 border-b border-soft pb-4">
+			<div>
+				<p class="m-0 font-data text-[12px] text-ink-secondary">BANCO · df_media_mensal</p>
+				<h2 id="ultima-leitura-titulo" class="mt-2 mb-0 text-[20px] font-semibold">
+					Última leitura disponível
+				</h2>
+			</div>
+			<button
+				type="button"
+				data-atualizar
+				class="rounded-inset border border-soft bg-white px-4 py-2 text-[13px] font-medium text-deep transition-colors hover:border-accent disabled:cursor-wait disabled:opacity-60"
+			>
+				Atualizar
+			</button>
+		</div>
+
+		<p data-status role="status" aria-live="polite" class="mt-5 text-[14px] text-ink-secondary">
+			Buscando dados do backend...
+		</p>
+
+		<div data-conteudo hidden>
+			<div class="mt-5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+				<span class="text-[13px] text-ink-secondary">Data de observação</span>
+				<time data-data class="font-data text-[15px] font-medium text-deep"></time>
+			</div>
+
+			<dl class="mt-6 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-4">
+				<div class="border-t-2 border-data-warm pt-3">
+					<dt class="text-[13px] text-ink-secondary">Niño 1+2</dt>
+					<dd data-nino12 class="mt-2 mb-0 font-data text-[25px] font-medium text-data-warm">—</dd>
+					<span class="text-[12px] text-ink-secondary">°C</span>
+				</div>
+				<div class="border-t-2 border-amber pt-3">
+					<dt class="text-[13px] text-ink-secondary">Niño 3</dt>
+					<dd data-nino3 class="mt-2 mb-0 font-data text-[25px] font-medium text-deep">—</dd>
+					<span class="text-[12px] text-ink-secondary">°C</span>
+				</div>
+				<div class="border-t-2 border-accent pt-3">
+					<dt class="text-[13px] text-ink-secondary">Niño 3.4</dt>
+					<dd data-nino34 class="mt-2 mb-0 font-data text-[25px] font-medium text-deep">—</dd>
+					<span class="text-[12px] text-ink-secondary">°C</span>
+				</div>
+				<div class="border-t-2 border-data-cold pt-3">
+					<dt class="text-[13px] text-ink-secondary">Niño 4</dt>
+					<dd data-nino4 class="mt-2 mb-0 font-data text-[25px] font-medium text-data-cold">—</dd>
+					<span class="text-[12px] text-ink-secondary">°C</span>
+				</div>
+			</dl>
+		</div>
+	</section>
+
+	<script define:vars={{ baseApi }}>
+		const section = document.querySelector("[data-enso]");
+		const status = section?.querySelector("[data-status]");
+		const content = section?.querySelector("[data-conteudo]");
+		const refreshButton = section?.querySelector("[data-atualizar]");
+
+		const formatValue = (value) => {
+			if (value === null || value === undefined || value === "") return "—";
+			const number = Number(value);
+			return Number.isFinite(number)
+				? new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(number)
+				: "—";
+		};
+
+		async function loadLatest() {
+			if (!status || !content || !refreshButton) return;
+
+			refreshButton.disabled = true;
+			status.hidden = false;
+			status.textContent = "Buscando dados do backend...";
+			content.hidden = true;
+
+			try {
+				const response = await fetch(`${baseApi}/api/enso/ultima`);
+				if (!response.ok) {
+					throw new Error(response.status === 404 ? "Ainda não há registros nessa tabela." : "Não foi possível consultar o backend.");
+				}
+
+				const row = await response.json();
+				const date = new Date(`${row.observation_date}T00:00:00`);
+				const dateLabel = Number.isNaN(date.getTime())
+					? row.observation_date
+					: new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(date);
+
+				section.querySelector("[data-data]").textContent = dateLabel;
+				section.querySelector("[data-nino12]").textContent = formatValue(row.nino12);
+				section.querySelector("[data-nino3]").textContent = formatValue(row.nino3);
+				section.querySelector("[data-nino34]").textContent = formatValue(row.nino34);
+				section.querySelector("[data-nino4]").textContent = formatValue(row.nino4);
+
+				status.hidden = true;
+				content.hidden = false;
+			} catch (error) {
+				status.textContent = error instanceof Error
+					? error.message
+					: "Não foi possível carregar os dados.";
+			} finally {
+				refreshButton.disabled = false;
+			}
+		}
+
+		refreshButton?.addEventListener("click", loadLatest);
+		loadLatest();
+	</script>
+</Base>

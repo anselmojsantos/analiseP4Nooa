@@ -1,0 +1,12 @@
+# Tema do ClimaSP — alinha o Streamlit aos tokens do Design System 00 do .pen.
+#
+# O secundário é $soft — ele pinta superfícies internas (cards, chips, campos).
+# A sidebar em $deep é aplicada por CSS em streamlit.css, porque colorir o
+# secundário de azul escapa para dentro dos itens de menu.
+
+[theme]
+base = "light"
+primaryColor = "#4A9FD8"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F7F8FA"
+textColor = "#1A1A1A"
